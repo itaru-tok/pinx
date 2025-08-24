@@ -1,49 +1,49 @@
 # X Bookmark Position Extension
 
-X (Twitter) のブックマーク位置を保存・復元するChrome拡張機能
+A Chrome extension to save and restore your scroll position on X (Twitter)
 
-## 機能
+## Features
 
-- 📍 現在のツイート位置をワンクリックで保存
-- ↩️ 保存した位置に即座に戻る
-- ⌨️ キーボードショートカット対応
-  - `Ctrl/Cmd + Shift + S`: 位置を保存
-  - `Ctrl/Cmd + Shift + R`: 位置を復元
-- 🌓 ダークモード/ライトモード自動対応
-- 📱 レスポンシブデザイン
+- 📍 Save current tweet position with one click
+- ↩️ Instantly return to saved position
+- ⌨️ Keyboard shortcuts support
+  - `Ctrl/Cmd + Shift + S`: Save position
+  - `Ctrl/Cmd + Shift + R`: Restore position
+- 🌓 Automatic dark/light mode support
+- 📱 Responsive design
 
-## インストール方法
+## Installation
 
-1. 依存関係をインストール:
+1. Install dependencies:
 ```bash
 npm install
 ```
 
-2. 開発モードで起動:
+2. Start in development mode:
 ```bash
 npm run dev
 ```
 
-3. Chromeで拡張機能を読み込み:
-   - Chrome拡張機能ページを開く: `chrome://extensions/`
-   - 「デベロッパーモード」を有効化
-   - 「パッケージ化されていない拡張機能を読み込む」をクリック
-   - `.output/chrome-mv3` フォルダを選択
+3. Load extension in Chrome:
+   - Open Chrome extensions page: `chrome://extensions/`
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select `.output/chrome-mv3` folder
 
-## ビルド
+## Build
 
-本番用ビルド:
+Production build:
 ```bash
 npm run build
 ```
 
-## 使い方
+## Usage
 
-1. X.com (Twitter) を開く
-2. 画面右に表示される「📍 位置を保存」ボタンをクリック
-3. 別のページに移動後、「↩️ 前回の位置へ」ボタンで保存位置に戻る
+1. Open X.com (Twitter)
+2. Click "📍 Save Position" button on the right side
+3. After navigating away, click "↩️ Return to Previous" to restore position
 
-## 技術スタック
+## Tech Stack
 
 - WXT (Web Extension Toolkit)
 - TypeScript
