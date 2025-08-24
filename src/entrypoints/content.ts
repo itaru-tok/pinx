@@ -255,19 +255,5 @@ export default {
       attributes: true,
       attributeFilter: ['style']
     });
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-      // Ctrl/Cmd + Shift + S to save
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
-        e.preventDefault();
-        savePosition();
-      }
-      // Ctrl/Cmd + Shift + R to restore
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'R') {
-        e.preventDefault();
-        restorePosition();
-      }
-    });
   }
 };

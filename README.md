@@ -6,9 +6,6 @@ A Chrome extension to save and restore your scroll position on X (Twitter)
 
 - 📍 Save current tweet position with one click
 - ↩️ Instantly return to saved position
-- ⌨️ Keyboard shortcuts support
-  - `Ctrl/Cmd + Shift + S`: Save position
-  - `Ctrl/Cmd + Shift + R`: Restore position
 - 🌓 Automatic dark/light mode support
 - 📱 Responsive design
 
@@ -40,8 +37,8 @@ npm run build
 ## Usage
 
 1. Open X.com (Twitter)
-2. Click "📍 Save Position" button on the right side
-3. After navigating away, click "↩️ Return to Previous" to restore position
+2. Click "📍 Save" button on the right side
+3. After navigating away, click "↩️ Jump" to restore position
 
 ## Tech Stack
 
