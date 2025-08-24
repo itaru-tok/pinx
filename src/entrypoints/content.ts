@@ -56,10 +56,10 @@ export default {
         };
 
         await storage.savePosition(position);
-        ui.showToast('Position saved', 'success');
+        ui.showToast('Position pinned', 'success');
         ui.updateRestoreButtonState(true, position.timestamp, position.tweetTimestamp);
       } catch (error) {
-        ui.showToast('Failed to save', 'error');
+        ui.showToast('Failed to pin', 'error');
       }
     };
 
@@ -69,7 +69,7 @@ export default {
         const savedPosition = await storage.getPosition();
         
         if (!savedPosition) {
-          ui.showToast('No saved position', 'error');
+          ui.showToast('No pinned position', 'error');
           return;
         }
         

@@ -53,15 +53,15 @@ export class UIManager {
     // Save button
     this.saveButton = document.createElement('button');
     this.saveButton.className = 'x-bookmark-btn x-bookmark-save';
-    this.saveButton.innerHTML = '📍 Save';
-    this.saveButton.title = 'Save current position';
+    this.saveButton.innerHTML = '📍 Pin';
+    this.saveButton.title = 'Pin current tweet position';
     this.saveButton.addEventListener('click', () => this.onSave());
 
     // Restore button
     this.restoreButton = document.createElement('button');
     this.restoreButton.className = 'x-bookmark-btn x-bookmark-restore';
     this.restoreButton.innerHTML = '↩️ Jump';
-    this.restoreButton.title = 'Return to saved position';
+    this.restoreButton.title = 'Jump back to pinned position';
     this.restoreButton.addEventListener('click', () => this.onRestore());
 
     // Stop button (hidden by default)

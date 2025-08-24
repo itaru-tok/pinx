@@ -1,11 +1,11 @@
-# X Bookmark Position Extension
+# X Pin - Pin your tweet
 
-A Chrome extension to save and restore your scroll position on X (Twitter)
+A Chrome extension to pin and jump back to your position on X (Twitter)
 
 ## Features
 
-- 📍 Save current tweet position with one click
-- ↩️ Instantly return to saved position
+- 📍 Pin your current tweet position with one click
+- ↩️ Jump back to your pinned position instantly
 - 🌓 Automatic dark/light mode support
 - 📱 Responsive design
 
@@ -37,7 +37,7 @@ npm run build
 ## Usage
 
 1. Open X.com (Twitter)
-2. Click "📍 Save" button on the right side
+2. Click "📍 Pin" button on the right side
 3. After navigating away, click "↩️ Jump" to restore position
 
 ## Tech Stack

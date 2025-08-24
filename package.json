@@ -1,6 +1,6 @@
 {
-  "name": "x-bookmark-extension",
-  "description": "Save and restore your reading position on X (Twitter)",
+  "name": "x-pin",
+  "description": "Pin your tweet - Save and jump back to your position on X (Twitter)",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
