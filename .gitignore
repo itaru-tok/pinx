@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+.output/
+dist/
+build/
+
+# WXT
+.wxt/
+
+# Editor
+.serena/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+create-icon.html
+demo.html
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local

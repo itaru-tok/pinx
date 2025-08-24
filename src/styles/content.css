@@ -1,0 +1,104 @@
+.x-bookmark-container {
+  position: fixed;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 9999;
+}
+
+.x-bookmark-btn {
+  padding: 12px 16px;
+  border-radius: 9999px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: white;
+  color: rgb(15, 20, 25);
+  min-width: 150px;
+  text-align: center;
+}
+
+.x-bookmark-dark .x-bookmark-btn {
+  background: rgb(32, 35, 39);
+  color: rgb(231, 233, 234);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.x-bookmark-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.x-bookmark-dark .x-bookmark-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+.x-bookmark-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.x-bookmark-btn:disabled {
+  cursor: not-allowed;
+}
+
+.x-bookmark-save {
+  background: rgb(29, 155, 240);
+  color: white;
+}
+
+.x-bookmark-save:hover:not(:disabled) {
+  background: rgb(26, 140, 216);
+}
+
+.x-bookmark-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  padding: 12px 24px;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.x-bookmark-toast-show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.x-bookmark-toast-success {
+  background: rgb(0, 186, 124);
+  color: white;
+}
+
+.x-bookmark-toast-error {
+  background: rgb(244, 33, 46);
+  color: white;
+}
+
+.x-bookmark-toast-info {
+  background: rgb(29, 155, 240);
+  color: white;
+}
+
+@media (max-width: 600px) {
+  .x-bookmark-container {
+    right: 10px;
+  }
+  
+  .x-bookmark-btn {
+    min-width: 120px;
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+}
