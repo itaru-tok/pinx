@@ -1,4 +1,4 @@
-# X Pin - Pin your tweet
+# PinX - Pin your tweet on X
 
 A Chrome extension to pin and jump back to your position on X (Twitter)
 

@@ -2,8 +2,8 @@ import { defineConfig } from 'wxt';
 
 export default defineConfig({
   manifest: {
-    name: "X Pin",
-    description: "Pin your tweet - Pin and jump back to your tweet on X",
+    name: "PinX",
+    description: "Pin your tweet and jump back anytime on X",
     version: "1.0.0",
     permissions: ["storage", "activeTab"],
     host_permissions: ["https://x.com/*", "https://twitter.com/*"]
