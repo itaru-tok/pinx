@@ -35,6 +35,7 @@ export default {
           tweetText: topTweet.text,
           authorHandle: topTweet.authorHandle,
           authorName: topTweet.authorName,
+          tweetTimestamp: topTweet.timestamp,
           timestamp: Date.now(),
           scrollPosition: window.scrollY,
           tweetOffsetTop: tweetRect.top,
@@ -56,9 +57,8 @@ export default {
 
         await storage.savePosition(position);
         ui.showToast('Position saved', 'success');
-        ui.updateRestoreButtonState(true);
+        ui.updateRestoreButtonState(true, position.timestamp, position.tweetTimestamp);
       } catch (error) {
-        console.error('Failed to save position:', error);
         ui.showToast('Failed to save', 'error');
       }
     };
@@ -91,33 +91,40 @@ export default {
           
           // If not found, try to load it
           if (!tweetElement) {
-            ui.showToast('Searching for tweet...', 'success');
-            
-            // Show debug info
-            console.log(`[XBookmark] Searching for tweet: ${savedPosition.tweetId}`);
-            console.log(`[XBookmark] Saved scroll position: ${savedPosition.scrollPosition}`);
-            console.log(`[XBookmark] Tweet age: ${Math.round((Date.now() - savedPosition.timestamp) / (1000 * 60))} minutes`);
-            
-            // Show periodic updates during long searches
-            let searchTime = 0;
-            const searchInterval = setInterval(() => {
-              searchTime += 3;
-              if (searchTime < 10) {
-                ui.showToast('Still searching... Loading more tweets', 'success');
-              } else if (searchTime < 20) {
-                ui.showToast('This is taking a while... Loading deep tweets', 'success');
-              } else {
-                ui.showToast('Almost there... Please wait', 'success');
-              }
-            }, 3000);
+            // Show searching UI with stop button and time ago
+            ui.startSearching(() => {
+              detector.cancelSearch();
+            }, savedPosition.timestamp);
             
             try {
-              tweetElement = await detector.waitForTweet(
+              const result = await detector.waitForTweet(
                 savedPosition.tweetId, 
-                savedPosition.scrollPosition
+                savedPosition.scrollPosition,
+                (message) => {
+                  ui.updateSearchingProgress(message);
+                }
               );
+              tweetElement = result.element;
+              
+              // Check if search timed out
+              if (!tweetElement && result.timedOut) {
+                ui.showToast('Time\'s up!', 'info');
+                return;
+              }
             } finally {
-              clearInterval(searchInterval);
+              ui.stopSearching();
+            }
+            
+            // Check if search was cancelled vs not found
+            if (!tweetElement) {
+              if (detector.wasSearchCancelled()) {
+                ui.showToast('Search cancelled', 'info');
+                return;
+              } else if (savedPosition.scrollPosition !== undefined) {
+                // Tweet not found (probably deleted), but we scrolled to saved position
+                ui.showToast('Found nearby!', 'info');
+                return;
+              }
             }
           }
 
@@ -130,7 +137,7 @@ export default {
               top: targetScrollY,
               behavior: 'smooth'
             });
-            ui.showToast('Position restored', 'success');
+            ui.showToast('Found it!', 'success');
             return;
           }
         }
@@ -174,7 +181,7 @@ export default {
                   top: window.scrollY + rect.top + offset,
                   behavior: 'smooth'
                 });
-                ui.showToast('Positioned near saved location', 'success');
+                ui.showToast('Found nearby!', 'success');
                 return;
               }
             }
@@ -190,24 +197,17 @@ export default {
             
             if (similarTweet) {
               similarTweet.element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              ui.showToast('Found similar tweet', 'success');
+              ui.showToast('Found nearby!', 'success');
               return;
             }
           }
           
           // Give more context about why it's approximate
-          const minutesAgo = Math.round((Date.now() - savedPosition.timestamp) / (1000 * 60));
-          if (minutesAgo > 60) {
-            const hoursAgo = Math.round(minutesAgo / 60);
-            ui.showToast(`Restored to approximate position (saved ${hoursAgo}h ago)`, 'info');
-          } else {
-            ui.showToast(`Restored to approximate position (saved ${minutesAgo}m ago)`, 'info');
-          }
+          ui.showToast('Found nearby!', 'info');
         } else {
           ui.showToast('Tweet not found', 'error');
         }
       } catch (error) {
-        console.error('Failed to restore position:', error);
         ui.showToast('Failed to restore', 'error');
       }
     };
@@ -218,21 +218,26 @@ export default {
 
     // Update restore button state
     storage.hasPosition().then(hasPosition => {
-      ui.updateRestoreButtonState(hasPosition);
-      
-      // Auto-restore on page load if position exists
       if (hasPosition) {
-        storage.getPosition().then(pos => {
-          // Auto-restore if we're on home timeline
-          if (pos && window.location.pathname === '/home') {
-            console.log('[XBookmark] Auto-restoring position on home timeline');
-            // Wait a bit longer for initial page load
-            setTimeout(() => {
-              restorePosition();
-            }, 2000);
-          }
+        storage.getPosition().then(position => {
+          ui.updateRestoreButtonState(true, position?.timestamp, position?.tweetTimestamp);
         });
+      } else {
+        ui.updateRestoreButtonState(false);
       }
+      
+      // // Auto-restore on page load if position exists
+      // if (hasPosition) {
+      //   storage.getPosition().then(pos => {
+      //     // Auto-restore if we're on home timeline
+      //     if (pos && window.location.pathname === '/home') {
+      //       // Wait a bit longer for initial page load
+      //       setTimeout(() => {
+      //         restorePosition();
+      //       }, 2000);
+      //     }
+      //   });
+      // }
     });
 
     // Detect theme

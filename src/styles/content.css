@@ -56,13 +56,18 @@
   background: rgb(26, 140, 216);
 }
 
+.x-bookmark-restore:hover:not(:disabled) {
+  background: rgb(34, 197, 94);
+  color: white;
+}
+
 .x-bookmark-toast {
   position: fixed;
   top: 20px;
   left: 50%;
   transform: translateX(-50%) translateY(-100px);
-  padding: 12px 24px;
-  border-radius: 9999px;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   opacity: 0;
@@ -89,6 +94,54 @@
 .x-bookmark-toast-info {
   background: rgb(29, 155, 240);
   color: white;
+}
+
+/* Stop button styles */
+.x-bookmark-stop {
+  background: rgb(113, 118, 123);
+  color: white;
+}
+
+.x-bookmark-stop:hover:not(:disabled) {
+  background: rgb(83, 100, 113);
+}
+
+/* Searching toast (persistent) */
+.x-bookmark-searching-toast {
+  background: rgb(32, 35, 39);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 8px 16px;
+}
+
+.x-bookmark-searching-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Loading spinner */
+.x-bookmark-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: x-bookmark-spin 0.8s linear infinite;
+}
+
+@keyframes x-bookmark-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.x-bookmark-searching-text {
+  font-weight: 500;
 }
 
 @media (max-width: 600px) {

@@ -4,10 +4,21 @@ export interface TweetInfo {
   text?: string;
   authorHandle?: string;
   authorName?: string;
+  timestamp?: string;
   element: Element;
 }
 
 export class TweetDetector {
+  private searchCancelled = false;
+
+  public cancelSearch(): void {
+    this.searchCancelled = true;
+  }
+
+  public wasSearchCancelled(): boolean {
+    return this.searchCancelled;
+  }
+
   public isFollowingTabActive(): boolean {
     // Check if we're on the home page
     if (window.location.pathname !== '/home') {
@@ -28,8 +39,6 @@ export class TweetDetector {
     // Alternative check: look for the active underline (blue bar)
     const hasActiveStyle = followingTab.querySelector('div[dir="ltr"] > div[style*="rgb(29, 155, 240)"]') !== null;
     
-    console.log(`[XBookmark] Following tab check - Selected: ${isSelected}, HasActiveStyle: ${hasActiveStyle}`);
-    
     return isSelected || hasActiveStyle;
   }
   
@@ -37,7 +46,6 @@ export class TweetDetector {
     // Find all tab links
     const tabs = document.querySelectorAll('a[href="/home"][role="tab"]');
     if (tabs.length < 2) {
-      console.log('[XBookmark] Following tab not found');
       return false;
     }
     
@@ -46,12 +54,10 @@ export class TweetDetector {
     
     // Check if already on Following tab
     if (this.isFollowingTabActive()) {
-      console.log('[XBookmark] Already on Following tab');
       return true;
     }
     
     // Click the Following tab
-    console.log('[XBookmark] Switching to Following tab');
     followingTab.click();
     
     // Wait for the tab to load
@@ -89,6 +95,12 @@ export class TweetDetector {
     return nameElement?.textContent || undefined;
   }
 
+  private getTweetTimestamp(article: Element): string | undefined {
+    // Look for the time element in the tweet
+    const timeElement = article.querySelector('time');
+    return timeElement?.textContent || undefined;
+  }
+
   public getVisibleTweets(): TweetInfo[] {
     const articles = document.querySelectorAll('article[data-testid="tweet"]');
     const tweets: TweetInfo[] = [];
@@ -106,6 +118,7 @@ export class TweetDetector {
           text: this.getTweetText(article),
           authorHandle: this.getAuthorHandle(article),
           authorName: this.getAuthorName(article),
+          timestamp: this.getTweetTimestamp(article),
           element: article
         });
       }
@@ -198,59 +211,72 @@ export class TweetDetector {
     const nearBottom = documentHeight - scrollBottom < 1000;
     
     const hasLoader = !!(loadingSpinner || loadingCell || shimmer || loadingText || timelineSpinner);
-    console.log(`[XBookmark] Loading check - NearBottom: ${nearBottom}, HasLoader: ${hasLoader}, ScrollBottom: ${scrollBottom}, DocHeight: ${documentHeight}`);
     
     // Return true if we have any loader, regardless of position (X sometimes loads in the middle)
     return hasLoader || nearBottom;
   }
 
-  private async waitForNewTweetsToLoad(timeout = 5000): Promise<boolean> {
-    const startTime = Date.now();
-    const initialTweetCount = document.querySelectorAll('article[data-testid="tweet"]').length;
-    let wasLoading = false;
-    let previousHeight = document.documentElement.scrollHeight;
-    
-    console.log(`[XBookmark] Waiting for new tweets to load. Initial count: ${initialTweetCount}`);
-    
-    while (Date.now() - startTime < timeout) {
-      const isCurrentlyLoading = this.isLoadingMore();
-      const currentHeight = document.documentElement.scrollHeight;
-      
-      // Track if we see loading state
-      if (isCurrentlyLoading) {
-        wasLoading = true;
-      }
-      
-      // Check multiple conditions for new content
-      const currentTweetCount = document.querySelectorAll('article[data-testid="tweet"]').length;
-      const heightChanged = currentHeight > previousHeight;
-      const tweetsAdded = currentTweetCount > initialTweetCount;
-      
-      // If we were loading and now we're not, or if content changed
-      if ((wasLoading && !isCurrentlyLoading) || heightChanged || tweetsAdded) {
-        if (tweetsAdded || heightChanged) {
-          console.log(`[XBookmark] New content detected! Tweets: ${initialTweetCount} -> ${currentTweetCount}, Height: ${previousHeight} -> ${currentHeight}`);
-          await new Promise(resolve => setTimeout(resolve, 500)); // Small delay for DOM to settle
-          return true;
-        }
-      }
-      
-      previousHeight = currentHeight;
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
-    
-    console.log('[XBookmark] Timeout waiting for new tweets');
-    return false;
+  private waitForDOMChanges(): Promise<void> {
+    return new Promise((resolve) => {
+      // Use requestAnimationFrame for better performance
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          resolve();
+        });
+      });
+    });
   }
 
-  public async waitForTweet(id: string, savedScrollPosition?: number, maxAttempts = 50): Promise<Element | null> {
-    console.log(`[XBookmark] Starting search for tweet ${id}`);
+  private async waitForNewTweetsToLoad(timeout = 3000): Promise<boolean> {
+    const startTime = Date.now();
+    const initialTweetCount = document.querySelectorAll('article[data-testid="tweet"]').length;
+    const initialHeight = document.documentElement.scrollHeight;
+    
+    // Create a MutationObserver to detect DOM changes
+    return new Promise((resolve) => {
+      let resolved = false;
+      
+      const observer = new MutationObserver(async () => {
+        const currentTweetCount = document.querySelectorAll('article[data-testid="tweet"]').length;
+        const currentHeight = document.documentElement.scrollHeight;
+        
+        if (currentTweetCount > initialTweetCount || currentHeight > initialHeight) {
+          if (!resolved) {
+            resolved = true;
+            observer.disconnect();
+            await this.waitForDOMChanges();
+            resolve(true);
+          }
+        }
+      });
+      
+      // Start observing
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+      
+      // Timeout fallback
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          observer.disconnect();
+          resolve(false);
+        }
+      }, timeout);
+    });
+  }
+
+  public async waitForTweet(id: string, savedScrollPosition?: number, onProgress?: (message: string) => void): Promise<{ element: Element | null; timedOut?: boolean }> {
+    this.searchCancelled = false;
+    const startTime = Date.now();
+    const MAX_SEARCH_TIME = 60000; // 1 minute
+    let timedOut = false;
     
     // First check if tweet is already loaded
     let tweet = this.findTweetById(id);
     if (tweet) {
-      console.log('[XBookmark] Tweet found immediately');
-      return tweet;
+      return { element: tweet };
     }
     
     // If we have a saved scroll position, try to get close to it first
@@ -260,40 +286,51 @@ export class TweetDetector {
       
       // If we're far from the saved position, jump closer first
       if (distance > window.innerHeight * 3) {
-        console.log(`[XBookmark] Large distance detected (${distance}px), jumping to saved position`);
         
         // For very deep positions, do progressive jumps
         if (distance > window.innerHeight * 10) {
-          // Jump in stages to trigger loading
-          const jumpStages = 5; // More stages for better loading
+          // Jump in more stages for better loading
+          const jumpStages = 10; // More stages to ensure loading
           const stageDistance = (savedScrollPosition - currentScroll) / jumpStages;
           
           for (let i = 1; i <= jumpStages; i++) {
+            if (this.searchCancelled) {
+              return { element: null };
+            }
             const targetScroll = currentScroll + (stageDistance * i);
             window.scrollTo({
               top: targetScroll,
               behavior: 'auto'
             });
-            console.log(`[XBookmark] Jump stage ${i}/${jumpStages}, position: ${targetScroll}`);
+            if (onProgress) {
+              const elapsed = Math.round((Date.now() - startTime) / 1000);
+              onProgress(`Searching... (${elapsed}s / max 60s)`);
+            }
             
-            // Always wait for potential loading after each jump
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Wait for content to render
+            await this.waitForDOMChanges();
             
             // Check if tweet appeared
             tweet = this.findTweetById(id);
             if (tweet) {
-              console.log(`[XBookmark] Tweet found after jump stage ${i}`);
-              return tweet;
+              return { element: tweet };
             }
             
-            // Check for loading and wait longer if needed
-            if (this.isLoadingMore() || i === jumpStages) {
-              console.log('[XBookmark] Loading detected or final stage, waiting for tweets...');
-              const loaded = await this.waitForNewTweetsToLoad(10000); // More time
-              if (loaded) {
-                // Check again after loading
-                tweet = this.findTweetById(id);
-                if (tweet) return tweet;
+            // Always wait for potential loading after each jump
+            const beforeTweetCount = document.querySelectorAll('article[data-testid="tweet"]').length;
+            
+            // Force a small scroll to trigger loading if needed
+            window.scrollBy(0, 50);
+            await this.waitForDOMChanges();
+            
+            const loaded = await this.waitForNewTweetsToLoad(2000);
+            const afterTweetCount = document.querySelectorAll('article[data-testid="tweet"]').length;
+            
+            if (loaded || afterTweetCount > beforeTweetCount) {
+              // Check again after loading
+              tweet = this.findTweetById(id);
+              if (tweet) {
+                return { element: tweet };
               }
             }
           }
@@ -303,11 +340,11 @@ export class TweetDetector {
             top: savedScrollPosition,
             behavior: 'auto'
           });
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await this.waitForDOMChanges();
           
           // Check again after jumping
           tweet = this.findTweetById(id);
-          if (tweet) return tweet;
+          if (tweet) return { element: tweet };
         }
       }
     }
@@ -317,32 +354,68 @@ export class TweetDetector {
     // Otherwise, always search downward (more common case)
     const searchDirection = savedScrollPosition !== undefined && window.scrollY > savedScrollPosition ? 'up' : 'down';
     
-    console.log(`[XBookmark] Searching ${searchDirection} for tweet`);
-    
     // Only search in one direction
     const directions = [searchDirection];
+    let totalAttempts = 0;
+    
+    // Check if we should continue searching
+    const shouldContinue = () => {
+      // Time limit (1 minute)
+      if (Date.now() - startTime > MAX_SEARCH_TIME) {
+        timedOut = true;
+        return false;
+      }
+      
+      // Position limit - don't search too far past saved position
+      if (savedScrollPosition && window.scrollY > savedScrollPosition + window.innerHeight) {
+        return false;
+      }
+      
+      // Check for end of timeline
+      const endOfTimeline = document.querySelector('[data-testid="endOfTimelineModule"]');
+      if (endOfTimeline) {
+        return false;
+      }
+      
+      // User cancelled
+      if (this.searchCancelled) {
+        return false;
+      }
+      
+      return true;
+    };
     
     for (const direction of directions) {
       let attemptCount = 0;
       let noProgressCount = 0;
       
-      while (attemptCount < maxAttempts) {
+      while (shouldContinue()) {
         attemptCount++;
+        totalAttempts++;
         
         // Record current position
         const beforeScroll = window.scrollY;
         
         // Scroll in the current direction
-        // Use larger scroll amounts for faster searching
-        const scrollAmount = window.innerHeight * 1.5 * (direction === 'up' ? -1 : 1);
-        window.scrollBy(0, scrollAmount);
+        // Use smaller scroll amount for more control
+        const scrollAmount = window.innerHeight * 1.2 * (direction === 'up' ? -1 : 1);
+        window.scrollBy({
+          top: scrollAmount,
+          behavior: 'auto'
+        });
         
-        // Wait for content to load
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Wait for DOM to stabilize using requestAnimationFrame
+        await this.waitForDOMChanges();
+        
+        // Update progress every few attempts
+        if (attemptCount % 5 === 0 && onProgress) {
+          const elapsed = Math.round((Date.now() - startTime) / 1000);
+          onProgress(`Searching... (${elapsed}s / max 60s)`);
+        }
         
         // Check if tweet appeared
         tweet = this.findTweetById(id);
-        if (tweet) return tweet;
+        if (tweet) return { element: tweet };
         
         // Check if we made progress
         const afterScroll = window.scrollY;
@@ -353,44 +426,36 @@ export class TweetDetector {
           if (direction === 'down' && noProgressCount >= 2) {
             // Check if we're at a loading point
             const isLoading = this.isLoadingMore();
-            console.log(`[XBookmark] No progress count: ${noProgressCount}, Loading: ${isLoading}`);
             
             if (isLoading || noProgressCount >= 2) {
               // Force scroll to bottom to trigger loading
               const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
               window.scrollTo(0, maxScroll);
-              console.log('[XBookmark] Forced scroll to bottom to trigger loading');
               
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              await this.waitForDOMChanges();
               
               // Small scroll to trigger loading
               window.scrollBy(0, 10);
-              await new Promise(resolve => setTimeout(resolve, 500));
+              await this.waitForDOMChanges();
               
-              console.log('[XBookmark] Loading detected, waiting for new tweets...');
               const tweetsBefore = document.querySelectorAll('article[data-testid="tweet"]').length;
               const loaded = await this.waitForNewTweetsToLoad(10000); // Give more time
               const tweetsAfter = document.querySelectorAll('article[data-testid="tweet"]').length;
               
               if (loaded) {
-                console.log(`[XBookmark] New tweets loaded! Before: ${tweetsBefore}, After: ${tweetsAfter}`);
                 noProgressCount = 0; // Reset counter
                 
                 // After loading, check if we found the tweet
                 tweet = this.findTweetById(id);
                 if (tweet) {
-                  console.log('[XBookmark] Found tweet after loading!');
-                  return tweet;
+                  return { element: tweet };
                 }
                 continue;
-              } else {
-                console.log('[XBookmark] No new tweets loaded after waiting');
               }
             }
             
             // If still no progress after waiting, we're truly at the end
             if (noProgressCount >= 3) {
-              console.log('Reached the end of timeline');
               break;
             }
           } else if (noProgressCount >= 3) {
@@ -404,6 +469,15 @@ export class TweetDetector {
       }
     }
     
-    return null;
+    // If we have a saved position, stay near it instead of going to top
+    if (savedScrollPosition !== undefined) {
+      // Scroll to approximately where the tweet should have been
+      window.scrollTo({
+        top: savedScrollPosition,
+        behavior: 'smooth'
+      });
+    }
+    
+    return { element: null, timedOut };
   }
 }

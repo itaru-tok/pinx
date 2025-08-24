@@ -4,6 +4,7 @@ export interface SavedPosition {
   tweetText?: string;
   authorHandle?: string;
   authorName?: string;  // Display name for better matching
+  tweetTimestamp?: string;  // The tweet's post time (e.g., "7h", "Aug 23")
   timestamp: number;
   scrollPosition?: number;
   tweetOffsetTop?: number;  // How far from viewport top the tweet was
