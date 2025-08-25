@@ -6,7 +6,7 @@ A Chrome extension to pin and jump back to your position on X (Twitter)
 
 - 📍 Pin your current tweet position with one click
 - ↩️ Jump back to your pinned position instantly
-- 🌓 Automatic dark/light mode support
+- 🌓 Automatic dark/light mode support for Button
 - 📱 Responsive design
 
 ## Installation
@@ -37,8 +37,8 @@ npm run build
 ## Usage
 
 1. Open X.com (Twitter)
-2. Click "📍 Pin" button on the right side
-3. After navigating away, click "↩️ Jump" to restore position
+2. Click "Pin" button on the right side
+3. After navigating away, click "Jump" to restore position
 
 ## Tech Stack
 

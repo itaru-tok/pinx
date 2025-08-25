@@ -53,21 +53,21 @@ export class UIManager {
     // Save button
     this.saveButton = document.createElement('button');
     this.saveButton.className = 'x-bookmark-btn x-bookmark-save';
-    this.saveButton.innerHTML = '📍 Pin';
+    this.saveButton.innerHTML = 'Pin';
     this.saveButton.title = 'Pin current tweet position';
     this.saveButton.addEventListener('click', () => this.onSave());
 
     // Restore button
     this.restoreButton = document.createElement('button');
     this.restoreButton.className = 'x-bookmark-btn x-bookmark-restore';
-    this.restoreButton.innerHTML = '↩️ Jump';
+    this.restoreButton.innerHTML = 'Jump';
     this.restoreButton.title = 'Jump back to pinned position';
     this.restoreButton.addEventListener('click', () => this.onRestore());
 
     // Stop button (hidden by default)
     this.stopButton = document.createElement('button');
     this.stopButton.className = 'x-bookmark-btn x-bookmark-stop';
-    this.stopButton.innerHTML = '⏹️ Cancel';
+    this.stopButton.innerHTML = 'Cancel';
     this.stopButton.title = 'Stop searching';
     this.stopButton.style.display = 'none';
     this.stopButton.addEventListener('click', () => {
@@ -150,9 +150,9 @@ export class UIManager {
         // Add 'ago' if the timestamp is a relative time (contains h, m, s, d)
         const needsAgo = /^\d+[hmsd]$/.test(tweetTimestamp);
         const displayTime = needsAgo ? `${tweetTimestamp} ago` : tweetTimestamp;
-        this.restoreButton.innerHTML = `↩️ Jump (${displayTime})`;
+        this.restoreButton.innerHTML = `Jump (${displayTime})`;
       } else {
-        this.restoreButton.innerHTML = '↩️ Jump';
+        this.restoreButton.innerHTML = 'Jump';
       }
     }
   }
