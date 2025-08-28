@@ -17,7 +17,7 @@ export interface SavedPosition {
 }
 
 export class StorageManager {
-  private readonly STORAGE_KEY = 'x_bookmark_position';
+  private readonly STORAGE_KEY = 'pinx_saved_position';
   private readonly MAX_AGE_DAYS = 30;
 
   async savePosition(position: SavedPosition): Promise<void> {
