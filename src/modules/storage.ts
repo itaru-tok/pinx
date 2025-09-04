@@ -10,6 +10,8 @@ export interface SavedPosition {
   tweetOffsetTop?: number;  // How far from viewport top the tweet was
   pageUrl?: string;  // Current page URL to detect if we're on the same timeline
   isFollowingTab?: boolean;  // Whether saved on Following tab
+  savedHasSocialContext?: boolean; // Whether the saved item showed social context (e.g., repost)
+  savedIsPromoted?: boolean; // Whether the saved item was a promoted/ad tweet
   nearbyTweets?: {  // Save info about nearby tweets for better matching
     before?: { id?: string; handle?: string; text?: string };
     after?: { id?: string; handle?: string; text?: string };

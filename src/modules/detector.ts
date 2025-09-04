@@ -6,6 +6,9 @@ export interface TweetInfo {
   authorName?: string;
   timestamp?: string;
   element: Element;
+  isRepost?: boolean;
+  hasSocialContext?: boolean;
+  isPromoted?: boolean;
 }
 
 export class TweetDetector {
@@ -101,6 +104,28 @@ export class TweetDetector {
     return timeElement?.textContent || undefined;
   }
 
+  private hasSocialContext(article: Element): boolean {
+    return !!article.querySelector('[data-testid="socialContext"]');
+  }
+
+  private isPromoted(article: Element): boolean {
+    const text = article.textContent?.toLowerCase() || '';
+    const badge = article.querySelector('[data-testid="placementTracking"], [aria-label*="Promoted" i]');
+    const keywordLikely = /(promoted|advert|sponsored|プロモーション|広告)/.test(text);
+    return !!badge || keywordLikely;
+  }
+
+  private isRepost(article: Element): boolean {
+    // Heuristic: if a social context exists AND contains a repost/retweet icon or keyword
+    const social = article.querySelector('[data-testid="socialContext"]');
+    if (!social) return false;
+    const text = social.textContent?.toLowerCase() || '';
+    const hasIcon = !!social.querySelector('svg');
+    // Best-effort keyword check; may be localized, so we also rely on icon presence
+    const keywordLikely = /(repost|retweet|retweeted)/.test(text);
+    return keywordLikely || hasIcon;
+  }
+
   public getVisibleTweets(): TweetInfo[] {
     const articles = document.querySelectorAll('article[data-testid="tweet"]');
     const tweets: TweetInfo[] = [];
@@ -119,7 +144,10 @@ export class TweetDetector {
           authorHandle: this.getAuthorHandle(article),
           authorName: this.getAuthorName(article),
           timestamp: this.getTweetTimestamp(article),
-          element: article
+          element: article,
+          isRepost: this.isRepost(article),
+          hasSocialContext: this.hasSocialContext(article),
+          isPromoted: this.isPromoted(article)
         });
       }
     });
@@ -177,11 +205,25 @@ export class TweetDetector {
     };
   }
 
-  public findTweetById(id: string): Element | null {
+  public findTweetById(id: string, preferWithContext?: boolean): Element | null {
     const links = document.querySelectorAll(`a[href*="/status/${id}"]`);
+    const candidates: Element[] = [];
+    const withContext: Element[] = [];
     for (const link of links) {
       const article = link.closest('article[data-testid="tweet"]');
-      if (article) return article;
+      if (article) {
+        if (this.hasSocialContext(article)) withContext.push(article);
+        else candidates.push(article);
+      }
+    }
+    // Respect preference if provided
+    if (preferWithContext === true) {
+      if (withContext.length > 0) return withContext[0];
+      if (candidates.length > 0) return candidates[0];
+    } else {
+      // Default: prefer original (no social context)
+      if (candidates.length > 0) return candidates[0];
+      if (withContext.length > 0) return withContext[0];
     }
     return null;
   }
@@ -267,14 +309,20 @@ export class TweetDetector {
     });
   }
 
-  public async waitForTweet(id: string, savedScrollPosition?: number, onProgress?: (message: string) => void): Promise<{ element: Element | null; timedOut?: boolean }> {
+  public async waitForTweet(
+    id: string,
+    savedScrollPosition?: number,
+    onProgress?: (message: string) => void,
+    preferWithContext?: boolean
+  ): Promise<{ element: Element | null; timedOut?: boolean }> {
     this.searchCancelled = false;
     const startTime = Date.now();
-    const MAX_SEARCH_TIME = 60000; // 1 minute
+    const MAX_SEARCH_TIME = 90000; // 1.5 minutes for deeper loads
+    const MAX_SEARCH_SECONDS = Math.round(MAX_SEARCH_TIME / 1000);
     let timedOut = false;
     
     // First check if tweet is already loaded
-    let tweet = this.findTweetById(id);
+    let tweet = this.findTweetById(id, preferWithContext);
     if (tweet) {
       return { element: tweet };
     }
@@ -304,14 +352,14 @@ export class TweetDetector {
             });
             if (onProgress) {
               const elapsed = Math.round((Date.now() - startTime) / 1000);
-              onProgress(`Searching... (${elapsed}s / max 60s)`);
+              onProgress(`Searching... (${elapsed}s / max ${MAX_SEARCH_SECONDS}s)`);
             }
             
             // Wait for content to render
             await this.waitForDOMChanges();
             
             // Check if tweet appeared
-            tweet = this.findTweetById(id);
+            tweet = this.findTweetById(id, preferWithContext);
             if (tweet) {
               return { element: tweet };
             }
@@ -343,19 +391,15 @@ export class TweetDetector {
           await this.waitForDOMChanges();
           
           // Check again after jumping
-          tweet = this.findTweetById(id);
+          tweet = this.findTweetById(id, preferWithContext);
           if (tweet) return { element: tweet };
         }
       }
     }
     
-    // Now search in the most logical direction
-    // If we have a saved position and we're past it, search upward
-    // Otherwise, always search downward (more common case)
-    const searchDirection = savedScrollPosition !== undefined && window.scrollY > savedScrollPosition ? 'up' : 'down';
-    
-    // Only search in one direction
-    const directions = [searchDirection];
+    // Decide preferred direction first, but search both directions to be resilient
+    const preferred = savedScrollPosition !== undefined && window.scrollY > savedScrollPosition ? 'up' : 'down';
+    const directions: Array<'up' | 'down'> = preferred === 'down' ? ['down', 'up'] : ['up', 'down'];
     let totalAttempts = 0;
     
     // Check if we should continue searching
@@ -363,11 +407,6 @@ export class TweetDetector {
       // Time limit (1 minute)
       if (Date.now() - startTime > MAX_SEARCH_TIME) {
         timedOut = true;
-        return false;
-      }
-      
-      // Position limit - don't search too far past saved position
-      if (savedScrollPosition && window.scrollY > savedScrollPosition + window.innerHeight) {
         return false;
       }
       
@@ -410,11 +449,11 @@ export class TweetDetector {
         // Update progress every few attempts
         if (attemptCount % 5 === 0 && onProgress) {
           const elapsed = Math.round((Date.now() - startTime) / 1000);
-          onProgress(`Searching... (${elapsed}s / max 60s)`);
+          onProgress(`Searching... (${elapsed}s / max ${MAX_SEARCH_SECONDS}s)`);
         }
         
         // Check if tweet appeared
-        tweet = this.findTweetById(id);
+        tweet = this.findTweetById(id, preferWithContext);
         if (tweet) return { element: tweet };
         
         // Check if we made progress
@@ -439,14 +478,14 @@ export class TweetDetector {
               await this.waitForDOMChanges();
               
               const tweetsBefore = document.querySelectorAll('article[data-testid="tweet"]').length;
-              const loaded = await this.waitForNewTweetsToLoad(10000); // Give more time
+            const loaded = await this.waitForNewTweetsToLoad(12000); // Give more time
               const tweetsAfter = document.querySelectorAll('article[data-testid="tweet"]').length;
               
               if (loaded) {
                 noProgressCount = 0; // Reset counter
                 
                 // After loading, check if we found the tweet
-                tweet = this.findTweetById(id);
+                tweet = this.findTweetById(id, preferWithContext);
                 if (tweet) {
                   return { element: tweet };
                 }

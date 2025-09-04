@@ -1,4 +1,4 @@
-import { TweetDetector } from '../modules/detector';
+import { TweetDetector, type TweetInfo } from '../modules/detector';
 import { StorageManager, SavedPosition } from '../modules/storage';
 import { UIManager } from '../modules/ui';
 import '../styles/content.css';
@@ -41,6 +41,8 @@ export default {
           tweetOffsetTop: tweetRect.top,
           pageUrl: window.location.href,
           isFollowingTab: true,
+          savedHasSocialContext: (topTweet as TweetInfo).hasSocialContext === true,
+          savedIsPromoted: (topTweet as TweetInfo).isPromoted === true,
           nearbyTweets: {
             before: context.before ? {
               id: context.before.id,
@@ -85,9 +87,16 @@ export default {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
-        // First, try to find the tweet if it's already loaded
-        if (savedPosition.tweetId) {
-          let tweetElement = detector.findTweetById(savedPosition.tweetId);
+        // If saved item was a promoted/ad, skip exact match and use nearby positioning
+        if (savedPosition.savedIsPromoted) {
+          // Jump to approximate position and use context to find a nearby real tweet
+          if (savedPosition.scrollPosition !== undefined) {
+            window.scrollTo({ top: savedPosition.scrollPosition, behavior: 'auto' });
+            await new Promise(resolve => setTimeout(resolve, 800));
+          }
+        } else if (savedPosition.tweetId) {
+          // First, try to find the tweet if it's already loaded (respect repost preference)
+          let tweetElement = detector.findTweetById(savedPosition.tweetId, savedPosition.savedHasSocialContext);
           
           // If not found, try to load it
           if (!tweetElement) {
@@ -102,7 +111,8 @@ export default {
                 savedPosition.scrollPosition,
                 (message) => {
                   ui.updateSearchingProgress(message);
-                }
+                },
+                savedPosition.savedHasSocialContext
               );
               tweetElement = result.element;
               
@@ -142,7 +152,7 @@ export default {
           }
         }
 
-        // Fallback: Try to find a nearby tweet by text or author
+        // Fallback: Try to find a nearby tweet by text AND author (tighter match)
         if (savedPosition.scrollPosition !== undefined) {
           // First jump to the approximate position
           window.scrollTo({
@@ -156,20 +166,23 @@ export default {
           // Try to find a tweet with similar content
           if (savedPosition.authorHandle || savedPosition.authorName || savedPosition.tweetText) {
             const allTweets = detector.getVisibleTweets();
+            // Choose candidate set based on whether the saved item had social context or was an ad
+            const base = allTweets.filter(t => !t.isPromoted);
+            const candidates = savedPosition.savedHasSocialContext ? base.filter(t => t.hasSocialContext) : base.filter(t => !t.hasSocialContext);
             
             // Try exact match first
-            let similarTweet = allTweets.find(tweet => 
+            let similarTweet = candidates.find(tweet => 
               (savedPosition.authorHandle && tweet.authorHandle === savedPosition.authorHandle) &&
-              (savedPosition.tweetText && tweet.text && tweet.text.includes(savedPosition.tweetText.slice(0, 50)))
+              (savedPosition.tweetText && tweet.text && savedPosition.tweetText.length >= 10 && tweet.text.includes(savedPosition.tweetText.slice(0, 50)))
             );
             
             // If not found, try to find using nearby tweet context
             if (!similarTweet && savedPosition.nearbyTweets) {
               // Look for the before/after tweets
               const beforeTweet = savedPosition.nearbyTweets.before ? 
-                allTweets.find(t => t.id === savedPosition.nearbyTweets!.before!.id) : null;
+                candidates.find(t => t.id === savedPosition.nearbyTweets!.before!.id) : null;
               const afterTweet = savedPosition.nearbyTweets.after ? 
-                allTweets.find(t => t.id === savedPosition.nearbyTweets!.after!.id) : null;
+                candidates.find(t => t.id === savedPosition.nearbyTweets!.after!.id) : null;
               
               // If we found a nearby tweet, position relative to it
               if (beforeTweet || afterTweet) {
@@ -181,29 +194,20 @@ export default {
                   top: window.scrollY + rect.top + offset,
                   behavior: 'smooth'
                 });
-                ui.showToast('Found nearby!', 'success');
+                ui.showToast('Found nearby (approximate)', 'info');
                 return;
               }
             }
             
-            // If not found, try more lenient match
-            if (!similarTweet) {
-              similarTweet = allTweets.find(tweet => 
-                (savedPosition.authorHandle && tweet.authorHandle === savedPosition.authorHandle) ||
-                (savedPosition.authorName && tweet.authorName === savedPosition.authorName) ||
-                (savedPosition.tweetText && tweet.text && tweet.text.includes(savedPosition.tweetText.slice(0, 30)))
-              );
-            }
-            
             if (similarTweet) {
               similarTweet.element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              ui.showToast('Found nearby!', 'success');
+              ui.showToast('Found nearby (matched content)', 'info');
               return;
             }
           }
           
-          // Give more context about why it's approximate
-          ui.showToast('Found nearby!', 'info');
+          // If we get here, avoid jumping to wrong content
+          ui.showToast('Pinned tweet not found (timeline shifted)', 'error');
         } else {
           ui.showToast('Tweet not found', 'error');
         }
