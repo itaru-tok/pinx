@@ -1,6 +1,6 @@
 .x-bookmark-container {
   position: fixed;
-  top: 50%;
+  top: 20%;
   right: 20px;
   transform: translateY(-50%);
   display: flex;
@@ -106,7 +106,26 @@
   background: rgb(83, 100, 113);
 }
 
+/* Separator to space Support/Toggle from main actions */
+.x-bookmark-separator {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 6px 0 4px;
+}
+.x-bookmark-dark .x-bookmark-separator {
+  background: rgba(255, 255, 255, 0.15);
+}
+
 /* Searching toast (persistent) */
+.x-bookmark-support {
+  background: #ff813f;
+  color: #fff;
+}
+
+.x-bookmark-support:hover:not(:disabled) {
+  background: #6f4e37; /* coffee color */
+}
+
 .x-bookmark-searching-toast {
   background: rgb(32, 35, 39);
   color: white;
@@ -154,4 +173,38 @@
     padding: 10px 14px;
     font-size: 12px;
   }
+}
+
+/* Smaller variant for utility buttons */
+.x-bookmark-btn-sm {
+  padding: 8px 12px;
+  min-width: 120px;
+  font-size: 12px;
+}
+
+/* Hide/Show toggle style */
+.x-bookmark-toggle {
+  background: rgb(229, 231, 235);
+  color: rgb(15, 20, 25);
+}
+.x-bookmark-dark .x-bookmark-toggle {
+  background: rgb(56, 68, 77);
+  color: rgb(231, 233, 234);
+}
+.x-bookmark-toggle:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+/* Collapsed state: keep only the toggle visible */
+.x-bookmark-collapsed .x-bookmark-btn:not(.x-bookmark-toggle) {
+  display: none;
+}
+/* Reduce gap when collapsed */
+.x-bookmark-collapsed {
+  gap: 0;
+  top: 23%; /* move higher when collapsed */
+}
+/* Hide separator when only toggle is shown */
+.x-bookmark-collapsed .x-bookmark-separator {
+  display: none;
 }

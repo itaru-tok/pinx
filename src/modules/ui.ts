@@ -3,9 +3,12 @@ export class UIManager {
   private saveButton: HTMLButtonElement | null = null;
   private restoreButton: HTMLButtonElement | null = null;
   private stopButton: HTMLButtonElement | null = null;
+  private supportButton: HTMLButtonElement | null = null;
+  private toggleButton: HTMLButtonElement | null = null;
   private toast: HTMLElement | null = null;
   private searchingToast: HTMLElement | null = null;
   private onStop: (() => void) | null = null;
+  private isCollapsed = false;
 
   constructor(
     private onSave: () => void,
@@ -79,6 +82,40 @@ export class UIManager {
     this.container.appendChild(this.saveButton);
     this.container.appendChild(this.restoreButton);
     this.container.appendChild(this.stopButton);
+
+    // Visual separator to space utility buttons from main actions
+    const separator = document.createElement('div');
+    separator.className = 'x-bookmark-separator';
+    this.container.appendChild(separator);
+
+    // Support button (smaller)
+    this.supportButton = document.createElement('button');
+    this.supportButton.className = 'x-bookmark-btn x-bookmark-support x-bookmark-btn-sm';
+    this.supportButton.innerHTML = '☕ Buy me a coffee';
+    this.supportButton.title = 'Buy me a coffee';
+    this.supportButton.addEventListener('click', () => {
+      try {
+        window.open('https://www.buymeacoffee.com/itaru', '_blank');
+      } catch (_) {
+        // no-op
+      }
+    });
+    this.container.appendChild(this.supportButton);
+
+    // Hide/Show toggle (smaller)
+    this.toggleButton = document.createElement('button');
+    this.toggleButton.className = 'x-bookmark-btn x-bookmark-toggle x-bookmark-btn-sm';
+    this.toggleButton.innerHTML = 'Hide Buttons';
+    this.toggleButton.title = 'Hide or show the controls';
+    this.toggleButton.addEventListener('click', () => this.toggleCollapse());
+    this.container.appendChild(this.toggleButton);
+  }
+
+  private toggleCollapse(): void {
+    this.isCollapsed = !this.isCollapsed;
+    if (!this.container || !this.toggleButton) return;
+    this.container.classList.toggle('x-bookmark-collapsed', this.isCollapsed);
+    this.toggleButton.innerHTML = this.isCollapsed ? 'Show Buttons' : 'Hide Buttons';
   }
 
   private createToast(): void {
