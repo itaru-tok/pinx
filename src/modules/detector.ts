@@ -216,6 +216,7 @@ export class TweetDetector {
         else candidates.push(article);
       }
     }
+    
     // Respect preference if provided
     if (preferWithContext === true) {
       if (withContext.length > 0) return withContext[0];
@@ -229,33 +230,31 @@ export class TweetDetector {
   }
 
   private isLoadingMore(): boolean {
-    // Check for various loading indicators
-    // 1. Progress bar spinner
-    const loadingSpinner = document.querySelector('[role="progressbar"]');
-    
-    // 2. Loading cell at the bottom
+    // Detect loading indicators that are near the current viewport only
+    const candidates: Element[] = [];
+    const spinner = document.querySelector('[role="progressbar"]');
+    if (spinner) candidates.push(spinner);
     const loadingCell = document.querySelector('[data-testid="cellInnerDiv"] [role="progressbar"]');
-    
-    // 3. Shimmer/placeholder elements
+    if (loadingCell) candidates.push(loadingCell);
     const shimmer = document.querySelector('[data-testid="placeholder"]');
-    
-    // 4. Check for "Loading" text in timeline
-    const loadingText = Array.from(document.querySelectorAll('span')).find(
-      span => span.textContent?.toLowerCase().includes('loading')
-    );
-    
-    // 5. Check for timeline spinner (new Twitter/X loading indicator)
+    if (shimmer) candidates.push(shimmer);
     const timelineSpinner = document.querySelector('[data-testid="TimelineLoadingSpinner"]');
-    
-    // 6. Check if we're near the bottom (where loading happens)
-    const scrollBottom = window.scrollY + window.innerHeight;
-    const documentHeight = document.documentElement.scrollHeight;
-    const nearBottom = documentHeight - scrollBottom < 1000;
-    
-    const hasLoader = !!(loadingSpinner || loadingCell || shimmer || loadingText || timelineSpinner);
-    
-    // Return true if we have any loader, regardless of position (X sometimes loads in the middle)
-    return hasLoader || nearBottom;
+    if (timelineSpinner) candidates.push(timelineSpinner);
+
+    const viewportTop = 0;
+    const viewportBottom = window.innerHeight;
+    const thresholdBottom = viewportBottom + window.innerHeight; // within 2 screens below
+    const thresholdTop = viewportTop - window.innerHeight; // within 1 screen above
+
+    for (const el of candidates) {
+      try {
+        const rect = el.getBoundingClientRect();
+        if (rect.top < thresholdBottom && rect.bottom > thresholdTop) {
+          return true;
+        }
+      } catch (_) { /* noop */ }
+    }
+    return false;
   }
 
   private waitForDOMChanges(): Promise<void> {
@@ -274,6 +273,7 @@ export class TweetDetector {
     const initialTweetCount = document.querySelectorAll('article[data-testid="tweet"]').length;
     const initialHeight = document.documentElement.scrollHeight;
     
+    
     // Create a MutationObserver to detect DOM changes
     return new Promise((resolve) => {
       let resolved = false;
@@ -281,7 +281,7 @@ export class TweetDetector {
       const observer = new MutationObserver(async () => {
         const currentTweetCount = document.querySelectorAll('article[data-testid="tweet"]').length;
         const currentHeight = document.documentElement.scrollHeight;
-        
+
         if (currentTweetCount > initialTweetCount || currentHeight > initialHeight) {
           if (!resolved) {
             resolved = true;
@@ -332,6 +332,7 @@ export class TweetDetector {
       const currentScroll = window.scrollY;
       const distance = Math.abs(currentScroll - savedScrollPosition);
       
+      
       // If we're far from the saved position, jump closer first
       if (distance > window.innerHeight * 3) {
         
@@ -340,7 +341,7 @@ export class TweetDetector {
           // Jump in more stages for better loading
           const jumpStages = 10; // More stages to ensure loading
           const stageDistance = (savedScrollPosition - currentScroll) / jumpStages;
-          
+
           for (let i = 1; i <= jumpStages; i++) {
             if (this.searchCancelled) {
               return { element: null };
@@ -454,7 +455,9 @@ export class TweetDetector {
         
         // Check if tweet appeared
         tweet = this.findTweetById(id, preferWithContext);
-        if (tweet) return { element: tweet };
+        if (tweet) {
+          return { element: tweet };
+        }
         
         // Check if we made progress
         const afterScroll = window.scrollY;
@@ -463,27 +466,22 @@ export class TweetDetector {
           
           // If we're stuck and going down, check for loading state
           if (direction === 'down' && noProgressCount >= 2) {
-            // Check if we're at a loading point
+            // Check if we're at a loading point near viewport; avoid jumping to page bottom
             const isLoading = this.isLoadingMore();
-            
-            if (isLoading || noProgressCount >= 2) {
-              // Force scroll to bottom to trigger loading
-              const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-              window.scrollTo(0, maxScroll);
-              
+
+            if (isLoading || noProgressCount >= 3) {
+              // Incremental nudge downward to trigger in-place loading
+              const step = Math.max(200, Math.floor(window.innerHeight * 0.9));
+              window.scrollBy(0, step);
+
               await this.waitForDOMChanges();
-              
-              // Small scroll to trigger loading
-              window.scrollBy(0, 10);
-              await this.waitForDOMChanges();
-              
+
               const tweetsBefore = document.querySelectorAll('article[data-testid="tweet"]').length;
-            const loaded = await this.waitForNewTweetsToLoad(12000); // Give more time
+              const loaded = await this.waitForNewTweetsToLoad(6000);
               const tweetsAfter = document.querySelectorAll('article[data-testid="tweet"]').length;
-              
-              if (loaded) {
+
+              if (loaded || tweetsAfter > tweetsBefore) {
                 noProgressCount = 0; // Reset counter
-                
                 // After loading, check if we found the tweet
                 tweet = this.findTweetById(id, preferWithContext);
                 if (tweet) {
