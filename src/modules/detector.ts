@@ -317,7 +317,7 @@ export class TweetDetector {
   ): Promise<{ element: Element | null; timedOut?: boolean }> {
     this.searchCancelled = false;
     const startTime = Date.now();
-    const MAX_SEARCH_TIME = 90000; // 1.5 minutes for deeper loads
+    const MAX_SEARCH_TIME = 120000; // 2 minutes for deeper loads
     const MAX_SEARCH_SECONDS = Math.round(MAX_SEARCH_TIME / 1000);
     let timedOut = false;
     
