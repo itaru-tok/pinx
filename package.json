@@ -1,7 +1,7 @@
 {
   "name": "pinx",
   "description": "PinX - Pin your tweet and jump back to your position on X (Twitter)",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "scripts": {
     "dev": "wxt",
