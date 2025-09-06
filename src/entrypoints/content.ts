@@ -244,28 +244,70 @@ export default {
       // }
     });
 
-    // Detect theme (support X's Dim and Lights out)
+    // Detect theme (robust for X Default/Dim/Lights out and SPA updates)
     const detectTheme = () => {
       try {
-        const pickColor = (el: Element): string => getComputedStyle(el as Element).backgroundColor;
-        const parse = (c: string): { r: number; g: number; b: number; a: number } | null => {
+        const parseRgb = (c: string): { r: number; g: number; b: number; a: number } | null => {
+          if (!c) return null;
+          if (c === 'transparent') return { r: 0, g: 0, b: 0, a: 0 };
           const m = c.match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*(\d*\.?\d+))?\)/);
           if (!m) return null;
           const r = parseInt(m[1], 10), g = parseInt(m[2], 10), b = parseInt(m[3], 10);
           const a = m[4] !== undefined ? parseFloat(m[4]) : 1;
           return { r, g, b, a };
         };
+        const parseHex = (hex: string): { r: number; g: number; b: number } | null => {
+          if (!hex) return null;
+          const h = hex.replace('#', '');
+          if (h.length === 3) {
+            const r = parseInt(h[0] + h[0], 16);
+            const g = parseInt(h[1] + h[1], 16);
+            const b = parseInt(h[2] + h[2], 16);
+            return { r, g, b };
+          }
+          if (h.length === 6) {
+            const r = parseInt(h.substring(0, 2), 16);
+            const g = parseInt(h.substring(2, 4), 16);
+            const b = parseInt(h.substring(4, 6), 16);
+            return { r, g, b };
+          }
+          return null;
+        };
         const isTransparent = (p: { r: number; g: number; b: number; a: number } | null) => !p || p.a === 0;
         const luminance = (p: { r: number; g: number; b: number }) => 0.2126 * p.r + 0.7152 * p.g + 0.0722 * p.b;
 
-        const rootColor = parse(pickColor(document.documentElement));
-        const bodyColor = parse(pickColor(document.body));
-        const color = !isTransparent(rootColor) ? rootColor : (!isTransparent(bodyColor) ? bodyColor : bodyColor);
-        // Consider dark if background luminance is low (covers Dim and Lights out)
-        const isDark = !!color && luminance(color) < 140;
+        const pickBg = (el: Element | null): { r: number; g: number; b: number; a: number } | null => {
+          if (!el) return null;
+          const c = getComputedStyle(el).backgroundColor;
+          return parseRgb(c);
+        };
+
+        // Check meta theme-color first (X updates this per theme)
+        const meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+        const metaRgb = meta?.content ? parseHex(meta.content) : null;
+        if (metaRgb) {
+          const metaIsDark = luminance(metaRgb) < 140;
+          ui.setTheme(metaIsDark);
+          return;
+        }
+
+        // Fallback: sample common containers in order
+        const candidates: (Element | null)[] = [
+          document.documentElement,
+          document.body,
+          document.querySelector('main'),
+          document.getElementById('layers'),
+          document.querySelector('[data-testid="primaryColumn"]'),
+        ];
+        let picked: { r: number; g: number; b: number; a: number } | null = null;
+        for (const el of candidates) {
+          const bg = pickBg(el);
+          if (bg && !isTransparent(bg)) { picked = bg; break; }
+        }
+        // If still transparent, assume light by default to avoid forcing dark erroneously
+        const isDark = picked ? luminance(picked) < 140 : (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         ui.setTheme(isDark);
       } catch {
-        // Fallback to system preference
         const prefersDark = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches;
         ui.setTheme(prefersDark);
       }
@@ -279,6 +321,15 @@ export default {
       attributes: true,
       attributeFilter: ['style', 'class', 'data-theme', 'data-color-mode']
     });
+    themeObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['style', 'class', 'data-theme', 'data-color-mode']
+    });
+    const layers = document.getElementById('layers');
+    if (layers) {
+      const layersObserver = new MutationObserver(detectTheme);
+      layersObserver.observe(layers, { attributes: true, attributeFilter: ['style', 'class'] });
+    }
 
     // Also react to system scheme changes
     try {
@@ -289,5 +340,9 @@ export default {
         (mq as any).addListener(detectTheme);
       }
     } catch {}
+
+    // Re-check shortly after load to catch SPA paints
+    setTimeout(detectTheme, 500);
+    setTimeout(detectTheme, 1500);
   }
 };
