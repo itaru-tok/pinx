@@ -180,7 +180,6 @@ export class UIManager {
   updateRestoreButtonState(hasPosition: boolean, savedTime?: number, tweetTimestamp?: string): void {
     if (this.restoreButton) {
       this.restoreButton.disabled = !hasPosition;
-      this.restoreButton.style.opacity = hasPosition ? '1' : '0.5';
       
       // Update button text with tweet timestamp
       if (hasPosition && tweetTimestamp) {

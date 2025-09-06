@@ -22,6 +22,7 @@
   color: rgb(15, 20, 25);
   min-width: 150px;
   text-align: center;
+  opacity: 0.75;
 }
 
 .x-bookmark-dark .x-bookmark-btn {
@@ -37,6 +38,7 @@
 
 .x-bookmark-dark .x-bookmark-btn:hover:not(:disabled) {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  opacity: 1;
 }
 
 .x-bookmark-btn:active:not(:disabled) {
@@ -68,7 +70,7 @@
   transform: translateX(-50%) translateY(-100px);
   padding: 8px 16px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 500;
   opacity: 0;
   transition: all 0.3s ease;
@@ -188,9 +190,17 @@
   color: rgb(15, 20, 25);
 }
 .x-bookmark-dark .x-bookmark-toggle {
-  background: rgb(56, 68, 77);
+  background: rgb(32, 35, 39);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   color: rgb(231, 233, 234);
 }
+
+.x-bookmark-dark .x-bookmark-toggle:hover {
+  background: rgb(56, 68, 77);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  opacity: 1;
+}
+
 .x-bookmark-toggle:hover:not(:disabled) {
   filter: brightness(0.95);
 }
