@@ -101,6 +101,12 @@
   color: white;
 }
 
+/* Pinned toast (Pin action) */
+.x-bookmark-toast-pinned {
+  background: rgb(26, 140, 216);
+  color: white;
+}
+
 /* Stop button styles */
 .x-bookmark-stop {
   /* Inherit theme base (light: white bg/black text, dark: dark bg/light text) */

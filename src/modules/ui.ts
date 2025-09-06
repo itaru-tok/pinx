@@ -164,7 +164,7 @@ export class UIManager {
     }
   }
 
-  showToast(message: string, type: 'success' | 'error' | 'info' = 'success'): void {
+  showToast(message: string, type: 'success' | 'error' | 'info' | 'pinned' = 'success'): void {
     if (!this.toast) return;
 
     this.toast.textContent = message;

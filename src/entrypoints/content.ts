@@ -58,7 +58,7 @@ export default {
         };
 
         await storage.savePosition(position);
-        ui.showToast('Position pinned', 'success');
+        ui.showToast('Tweet pinned', 'pinned');
         ui.updateRestoreButtonState(true, position.timestamp, position.tweetTimestamp);
       } catch (error) {
         ui.showToast('Failed to pin', 'error');
