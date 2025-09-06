@@ -27,13 +27,16 @@
 
 .x-bookmark-dark .x-bookmark-btn {
   background: rgb(32, 35, 39);
-  color: rgb(231, 233, 234);
+  color: #fff;
+  opacity: 0.75;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .x-bookmark-btn:hover:not(:disabled) {
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: #fff;
+  opacity: 1;
 }
 
 .x-bookmark-dark .x-bookmark-btn:hover:not(:disabled) {
@@ -47,11 +50,11 @@
 
 .x-bookmark-btn:disabled {
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .x-bookmark-save {
-  background: rgb(29, 155, 240);
-  color: white;
+  /* inherit base theme colors; action color on hover */
 }
 
 .x-bookmark-save:hover:not(:disabled) {
@@ -70,7 +73,7 @@
   transform: translateX(-50%) translateY(-100px);
   padding: 8px 16px;
   border-radius: 8px;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 500;
   opacity: 0;
   transition: all 0.3s ease;
@@ -100,12 +103,20 @@
 
 /* Stop button styles */
 .x-bookmark-stop {
-  background: rgb(113, 118, 123);
-  color: white;
+  /* Inherit theme base (light: white bg/black text, dark: dark bg/light text) */
+  background: inherit;
+  color: inherit;
 }
 
 .x-bookmark-stop:hover:not(:disabled) {
   background: rgb(83, 100, 113);
+  color: #fff;
+}
+
+/* Dark/Dim hover for Cancel */
+.x-bookmark-dark .x-bookmark-stop:hover:not(:disabled) {
+  background: rgb(56, 68, 77);
+  color: #fff;
 }
 
 /* Separator to space Support/Toggle from main actions */
@@ -120,12 +131,14 @@
 
 /* Searching toast (persistent) */
 .x-bookmark-support {
-  background: #ff813f;
-  color: #fff;
+  /* Light theme: match base buttons */
+  background: white;
+  color: rgb(15, 20, 25);
 }
 
 .x-bookmark-support:hover:not(:disabled) {
   background: #6f4e37; /* coffee color */
+  color: #fff;
 }
 
 .x-bookmark-searching-toast {
@@ -186,23 +199,27 @@
 
 /* Hide/Show toggle style */
 .x-bookmark-toggle {
-  background: rgb(229, 231, 235);
+  /* Light theme: white like base */
+  background: white;
   color: rgb(15, 20, 25);
 }
 .x-bookmark-dark .x-bookmark-toggle {
   background: rgb(32, 35, 39);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  color: rgb(231, 233, 234);
+  color: #fff;
 }
 
 .x-bookmark-dark .x-bookmark-toggle:hover {
-  background: rgb(56, 68, 77);
+  /* Do not change bg on hover in dark theme */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  color: #fff;
   opacity: 1;
 }
 
 .x-bookmark-toggle:hover:not(:disabled) {
-  filter: brightness(0.95);
+  /* Do not change bg on hover in light theme */
+  color: rgb(15, 20, 25);
+  opacity: 1;
 }
 
 /* Collapsed state: keep only the toggle visible */
@@ -217,4 +234,12 @@
 /* Hide separator when only toggle is shown */
 .x-bookmark-collapsed .x-bookmark-separator {
   display: none;
+}
+
+/* --- Dark theme hover overrides (ensure white text) --- */
+.x-bookmark-dark .x-bookmark-btn:hover:not(:disabled) {
+  color: #fff !important;
+}
+.x-bookmark-dark .x-bookmark-toggle:hover:not(:disabled) {
+  color: #fff !important;
 }
