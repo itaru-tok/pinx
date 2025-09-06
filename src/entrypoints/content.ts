@@ -244,11 +244,31 @@ export default {
       // }
     });
 
-    // Detect theme
+    // Detect theme (support X's Dim and Lights out)
     const detectTheme = () => {
-      const isDark = document.documentElement.style.backgroundColor === 'rgb(0, 0, 0)' ||
-                     document.body.style.backgroundColor === 'rgb(0, 0, 0)';
-      ui.setTheme(isDark);
+      try {
+        const pickColor = (el: Element): string => getComputedStyle(el as Element).backgroundColor;
+        const parse = (c: string): { r: number; g: number; b: number; a: number } | null => {
+          const m = c.match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*(\d*\.?\d+))?\)/);
+          if (!m) return null;
+          const r = parseInt(m[1], 10), g = parseInt(m[2], 10), b = parseInt(m[3], 10);
+          const a = m[4] !== undefined ? parseFloat(m[4]) : 1;
+          return { r, g, b, a };
+        };
+        const isTransparent = (p: { r: number; g: number; b: number; a: number } | null) => !p || p.a === 0;
+        const luminance = (p: { r: number; g: number; b: number }) => 0.2126 * p.r + 0.7152 * p.g + 0.0722 * p.b;
+
+        const rootColor = parse(pickColor(document.documentElement));
+        const bodyColor = parse(pickColor(document.body));
+        const color = !isTransparent(rootColor) ? rootColor : (!isTransparent(bodyColor) ? bodyColor : bodyColor);
+        // Consider dark if background luminance is low (covers Dim and Lights out)
+        const isDark = !!color && luminance(color) < 140;
+        ui.setTheme(isDark);
+      } catch {
+        // Fallback to system preference
+        const prefersDark = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        ui.setTheme(prefersDark);
+      }
     };
 
     detectTheme();
@@ -257,7 +277,17 @@ export default {
     const themeObserver = new MutationObserver(detectTheme);
     themeObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['style']
+      attributeFilter: ['style', 'class', 'data-theme', 'data-color-mode']
     });
+
+    // Also react to system scheme changes
+    try {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      if (typeof mq.addEventListener === 'function') {
+        mq.addEventListener('change', detectTheme);
+      } else if (typeof (mq as any).addListener === 'function') {
+        (mq as any).addListener(detectTheme);
+      }
+    } catch {}
   }
 };
