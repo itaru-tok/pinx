@@ -1,4 +1,4 @@
-import { TweetDetector, type TweetInfo } from '../modules/detector';
+import { TweetDetector, type TweetInfo, type WaitForTweetResult } from '../modules/detector';
 import { StorageManager, SavedPosition } from '../modules/storage';
 import { UIManager } from '../modules/ui';
 import '../styles/content.css';
@@ -106,7 +106,7 @@ export default {
             }, savedPosition.timestamp);
             
             try {
-              const result = await detector.waitForTweet(
+              const result: WaitForTweetResult = await detector.waitForTweet(
                 savedPosition.tweetId, 
                 savedPosition.scrollPosition,
                 (message) => {
@@ -119,6 +119,11 @@ export default {
               // Check if search timed out
               if (!tweetElement && result.timedOut) {
                 ui.showToast('Time\'s up!', 'info');
+                return;
+              }
+              // If we reached a load limit (can't load older tweets), inform and stop
+              if (!tweetElement && result.noMoreLoading) {
+                ui.showToast("Can't load more", 'info');
                 return;
               }
             } finally {

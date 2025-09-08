@@ -11,6 +11,12 @@ export interface TweetInfo {
   isPromoted?: boolean;
 }
 
+export interface WaitForTweetResult {
+  element: Element | null;
+  timedOut?: boolean;
+  noMoreLoading?: boolean;
+}
+
 export class TweetDetector {
   private searchCancelled = false;
 
@@ -314,12 +320,13 @@ export class TweetDetector {
     savedScrollPosition?: number,
     onProgress?: (message: string) => void,
     preferWithContext?: boolean
-  ): Promise<{ element: Element | null; timedOut?: boolean }> {
+  ): Promise<WaitForTweetResult> {
     this.searchCancelled = false;
     const startTime = Date.now();
     const MAX_SEARCH_TIME = 120000; // 2 minutes for deeper loads
     const MAX_SEARCH_SECONDS = Math.round(MAX_SEARCH_TIME / 1000);
     let timedOut = false;
+    let reachedLoadLimit = false;
     
     // First check if tweet is already loaded
     let tweet = this.findTweetById(id, preferWithContext);
@@ -414,6 +421,7 @@ export class TweetDetector {
       // Check for end of timeline
       const endOfTimeline = document.querySelector('[data-testid="endOfTimelineModule"]');
       if (endOfTimeline) {
+        reachedLoadLimit = true;
         return false;
       }
       
@@ -493,6 +501,9 @@ export class TweetDetector {
             
             // If still no progress after waiting, we're truly at the end
             if (noProgressCount >= 3) {
+              if (direction === 'down') {
+                reachedLoadLimit = true;
+              }
               break;
             }
           } else if (noProgressCount >= 3) {
@@ -515,6 +526,6 @@ export class TweetDetector {
       });
     }
     
-    return { element: null, timedOut };
+    return { element: null, timedOut, noMoreLoading: reachedLoadLimit };
   }
 }
